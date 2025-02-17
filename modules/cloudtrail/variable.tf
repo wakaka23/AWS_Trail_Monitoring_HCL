@@ -1,6 +1,8 @@
-variable "target" {
+variable "common" {
   type = object({
-    email_addresses = list(string)
+    env        = string
+    region     = string
+    account_id = string
   })
 }
 
