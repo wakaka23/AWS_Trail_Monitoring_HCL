@@ -6,8 +6,14 @@ variable "common" {
   })
 }
 
-variable "bucket" {
+variable "target" {
   type = object({
-    bucket_name_for_TrailLog       = string
+    email_addresses = list(string)
+  })
+}
+
+variable "cloudtrail" {
+  type = object({
+    log_group_name = string
   })
 }

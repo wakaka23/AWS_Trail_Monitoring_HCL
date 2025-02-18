@@ -16,3 +16,10 @@ module "cloudtrail" {
   common = local.common
   bucket = var.bucket
 }
+
+module "monitoring" {
+  source = "../../modules/monitoring"
+  common = local.common
+  target = var.target
+  cloudtrail = module.cloudtrail
+}
