@@ -9,7 +9,7 @@ resource "aws_s3_bucket" "cloudtrail" {
 
 resource "aws_s3_bucket_versioning" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.bucket
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -42,13 +42,13 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
 
 data "aws_iam_policy_document" "cloudtrail" {
   statement {
-    sid   = "AWSCloudTrailAclCheck"
+    sid    = "AWSCloudTrailAclCheck"
     effect = "Allow"
     principals {
       type        = "Service"
       identifiers = ["cloudtrail.amazonaws.com"]
     }
-    actions = ["s3:GetBucketAcl"]
+    actions   = ["s3:GetBucketAcl"]
     resources = [aws_s3_bucket.cloudtrail.arn]
     condition {
       test     = "StringEquals"
@@ -58,13 +58,13 @@ data "aws_iam_policy_document" "cloudtrail" {
   }
 
   statement {
-    sid   = "AWSCloudTrailWrite"
+    sid    = "AWSCloudTrailWrite"
     effect = "Allow"
     principals {
       type        = "Service"
       identifiers = ["cloudtrail.amazonaws.com"]
     }
-    actions = ["s3:PutObject"]
+    actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.cloudtrail.arn}/AWSLogs/${var.common.account_id}/*"]
     condition {
       test     = "StringEquals"
@@ -95,26 +95,26 @@ resource "aws_cloudwatch_log_group" "cloudtrail" {
 
 # Define CloudTrail trail
 resource "aws_cloudtrail" "main" {
-  name = "${var.common.env}-cloudtrail"
-  s3_bucket_name = aws_s3_bucket.cloudtrail.bucket
+  name                          = "${var.common.env}-cloudtrail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail.bucket
   include_global_service_events = true
-  enable_log_file_validation = true 
-  is_multi_region_trail = true
-  cloud_watch_logs_role_arn = aws_iam_role.cloudtrail.arn
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
-  depends_on = [aws_s3_bucket_policy.cloudtrail]
+  enable_log_file_validation    = true
+  is_multi_region_trail         = true
+  cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail.arn
+  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  depends_on                    = [aws_s3_bucket_policy.cloudtrail]
 }
 
 # Define IAM role for CloudTrail
 resource "aws_iam_role" "cloudtrail" {
-  name = "${var.common.env}-role-for-cloudtrail"
+  name               = "${var.common.env}-role-for-cloudtrail"
   assume_role_policy = data.aws_iam_policy_document.cloudtrail_trust_policy.json
 }
 
 # Define trust policy for CloudTrail
 data "aws_iam_policy_document" "cloudtrail_trust_policy" {
   statement {
-    effect  = "Allow"
+    effect = "Allow"
     principals {
       type        = "Service"
       identifiers = ["cloudtrail.amazonaws.com"]
@@ -132,16 +132,16 @@ resource "aws_iam_policy" "cloudtrail_policy" {
 
 data "aws_iam_policy_document" "cloudtrail_policy" {
   statement {
-    sid   = "CloudTrailCreateLogStream"
-    effect = "Allow"
-    actions = ["logs:CreateLogStream"]
+    sid       = "CloudTrailCreateLogStream"
+    effect    = "Allow"
+    actions   = ["logs:CreateLogStream"]
     resources = ["${aws_cloudwatch_log_group.cloudtrail.arn}:*"]
   }
 
   statement {
-    sid   = "CloudTrailPutLogEvents"
-    effect = "Allow"
-    actions = ["logs:PutLogEvents"]
+    sid       = "CloudTrailPutLogEvents"
+    effect    = "Allow"
+    actions   = ["logs:PutLogEvents"]
     resources = ["${aws_cloudwatch_log_group.cloudtrail.arn}:*"]
   }
 }

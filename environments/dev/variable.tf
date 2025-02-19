@@ -6,6 +6,6 @@ variable "target" {
 
 variable "bucket" {
   type = object({
-    bucket_name_for_TrailLog       = string
+    bucket_name_for_TrailLog = string
   })
 }

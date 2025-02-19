@@ -18,8 +18,8 @@ module "cloudtrail" {
 }
 
 module "monitoring" {
-  source = "../../modules/monitoring"
-  common = local.common
-  target = var.target
+  source     = "../../modules/monitoring"
+  common     = local.common
+  target     = var.target
   cloudtrail = module.cloudtrail
 }
