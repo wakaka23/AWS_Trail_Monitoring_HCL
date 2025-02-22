@@ -1,8 +1,8 @@
 ########################
-# CloudWatch Metrics Filter
+# CloudWatch Metrics Filter and Alarm
 ########################
 
-# Define CloudWatch Metrics Filter (IAMPolicyChangeFilter)
+# IAM Policy Change Detection
 resource "aws_cloudwatch_log_metric_filter" "iam_policy_change_filter" {
   name           = "${var.common.env}-IAMPolicyChangeFilter"
   pattern        = <<EOT
@@ -31,22 +31,21 @@ resource "aws_cloudwatch_log_metric_filter" "iam_policy_change_filter" {
   }
 }
 
-# Define CloudWatch Metrics Filter (UnauthorizedAttemptsFilter)
-resource "aws_cloudwatch_log_metric_filter" "unauthorized_attempts_filter" {
-  name           = "${var.common.env}-UnauthorizedAttemptsFilter"
-  pattern        = <<EOT
-  {($.errorCode = "*UnauthorizedOperation" || $.errorCode = "AccessDenied*") && 
-  ($.eventName != "Decrypt" || $.userIdentity.invokedBy != "config.amazonaws.com" )}
-  EOT
-  log_group_name = var.cloudtrail.log_group_name
-  metric_transformation {
-    namespace = "CloudTrailMetrics"
-    name      = "UnauthorizedAttemptsEventCount"
-    value     = "1"
-  }
+resource "aws_cloudwatch_metric_alarm" "iam_policy_change_alarm" {
+  alarm_name          = "${var.common.env}-IAMPolicyChangeAlarm"
+  namespace           = aws_cloudwatch_log_metric_filter.iam_policy_change_filter.metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.iam_policy_change_filter.metric_transformation[0].name
+  period              = "300"
+  statistic           = "Sum"
+  evaluation_periods  = "1"
+  datapoints_to_alarm = "1"
+  threshold           = "1"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_description   = "IAM Configuration changes detected!"
+  alarm_actions       = [aws_sns_topic.main.arn]
 }
 
-# Define CloudWatch Metrics Filter (NewAccessKeyCreatedFilter)
+# New AccessKey Creation Detection
 resource "aws_cloudwatch_log_metric_filter" "new_access_key_created_filter" {
   name           = "${var.common.env}-NewAccessKeyCreatedFilter"
   pattern        = <<EOT
@@ -60,7 +59,21 @@ resource "aws_cloudwatch_log_metric_filter" "new_access_key_created_filter" {
   }
 }
 
-# Define CloudWatch Filter (RootUserActivityFilter)
+resource "aws_cloudwatch_metric_alarm" "new_access_key_created_alarm" {
+  alarm_name          = "${var.common.env}-NewAccessKeyCreatedAlarm"
+  namespace           = aws_cloudwatch_log_metric_filter.new_access_key_created_filter.metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.new_access_key_created_filter.metric_transformation[0].name
+  period              = "300"
+  statistic           = "Sum"
+  evaluation_periods  = "1"
+  datapoints_to_alarm = "1"
+  threshold           = "1"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_description   = "Warning: New IAM access Key was created. Please be sure this action was neccessary."
+  alarm_actions       = [aws_sns_topic.main.arn]
+}
+
+# Root User Activity Detection
 resource "aws_cloudwatch_log_metric_filter" "root_user_activity_filter" {
   name           = "${var.common.env}-RootUserActivityFilter"
   pattern        = <<EOT
@@ -76,56 +89,6 @@ resource "aws_cloudwatch_log_metric_filter" "root_user_activity_filter" {
   }
 }
 
-########################
-# CloudWatch Alarm
-########################
-
-# Define CloudWatch Alarm (IAMPolicyChangeAlarm)
-resource "aws_cloudwatch_metric_alarm" "iam_policy_change_alarm" {
-  alarm_name          = "${var.common.env}-IAMPolicyChangeAlarm"
-  namespace           = aws_cloudwatch_log_metric_filter.iam_policy_change_filter.metric_transformation[0].namespace
-  metric_name         = aws_cloudwatch_log_metric_filter.iam_policy_change_filter.metric_transformation[0].name
-  period              = "300"
-  statistic           = "Sum"
-  evaluation_periods  = "1"
-  datapoints_to_alarm = "1"
-  threshold           = "1"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  alarm_description   = "IAM Configuration changes detected!"
-  alarm_actions       = [aws_sns_topic.main.arn]
-}
-
-# Define CloudWatch Alarm (UnauthorizedAttemptsAlarm)
-resource "aws_cloudwatch_metric_alarm" "unauthorized_attempts_alarm" {
-  alarm_name          = "${var.common.env}-UnauthorizedAttemptsAlarm"
-  namespace           = aws_cloudwatch_log_metric_filter.unauthorized_attempts_filter.metric_transformation[0].namespace
-  metric_name         = aws_cloudwatch_log_metric_filter.unauthorized_attempts_filter.metric_transformation[0].name
-  period              = "300"
-  statistic           = "Sum"
-  evaluation_periods  = "1"
-  datapoints_to_alarm = "1"
-  threshold           = "5"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  alarm_description   = "Multiple unauthorized actions or logins attempted!"
-  alarm_actions       = [aws_sns_topic.main.arn]
-}
-
-# Define CloudWatch Alarm (NewAccessKeyCreatedAlarm)
-resource "aws_cloudwatch_metric_alarm" "new_access_key_created_alarm" {
-  alarm_name          = "${var.common.env}-NewAccessKeyCreatedAlarm"
-  namespace           = aws_cloudwatch_log_metric_filter.new_access_key_created_filter.metric_transformation[0].namespace
-  metric_name         = aws_cloudwatch_log_metric_filter.new_access_key_created_filter.metric_transformation[0].name
-  period              = "300"
-  statistic           = "Sum"
-  evaluation_periods  = "1"
-  datapoints_to_alarm = "1"
-  threshold           = "1"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  alarm_description   = "Warning: New IAM access Key was created. Please be sure this action was neccessary."
-  alarm_actions       = [aws_sns_topic.main.arn]
-}
-
-# Define CloudWatch Alarm (RootUserActivityAlarm)
 resource "aws_cloudwatch_metric_alarm" "root_user_activity_alarm" {
   alarm_name          = "${var.common.env}-RootUserActivityAlarm"
   namespace           = aws_cloudwatch_log_metric_filter.root_user_activity_filter.metric_transformation[0].namespace
@@ -210,7 +173,7 @@ resource "aws_cloudwatch_event_rule" "cloudtrail_change_event_rule" {
     "detail": {
       "eventSource": ["cloudtrail.amazonaws.com"],
       "eventName": [
-        "CreateTrail", 
+        "StopLogging", 
         "DeleteTrail", 
         "UpdateTrail"
       ]
