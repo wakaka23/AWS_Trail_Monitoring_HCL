@@ -107,7 +107,7 @@ resource "aws_cloudwatch_metric_alarm" "root_user_activity_alarm" {
 # EventBridge
 ########################
 
-# Define EventBridge Rule (SgChangeEventRule)
+# Security Group Change Detection
 resource "aws_cloudwatch_event_rule" "sg_change_event_rule" {
   name          = "${var.common.env}-SgChangeEventRule"
   description   = "Notify to create, update or delete a Security Group."
@@ -134,7 +134,7 @@ resource "aws_cloudwatch_event_target" "sg_change_event_rule" {
   arn       = aws_sns_topic.main.arn
 }
 
-# Define EventBridge Rule (NACLChangeEventRule​)
+# NACL Change Detection
 resource "aws_cloudwatch_event_rule" "nacl_change_event_rule" {
   name          = "${var.common.env}-NACLChangeEventRule"
   description   = "Notify to create, update or delete a Network ACL."
@@ -163,7 +163,7 @@ resource "aws_cloudwatch_event_target" "nacl_change_event_rule" {
   arn       = aws_sns_topic.main.arn
 }
 
-# Define EventBridge Rule (CloudTrailChangeEventRule​)
+# CloudTrail Change Detection
 resource "aws_cloudwatch_event_rule" "cloudtrail_change_event_rule" {
   name          = "${var.common.env}-CloudTrailChangeEventRule"
   description   = "Notify to change on CloudTrail log configuration."
